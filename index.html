@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>習慣×場所×時間 ランダム決定アプリ</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f5f7fa; color: #333; display: flex; justify-content: center; min-height: 100vh; padding: 20px; }
+    .container { background: white; max-width: 500px; width: 100%; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+    h1 { font-size: 1.4rem; text-align: center; margin-bottom: 20px; color: #2c3e50; }
+    .section { margin-bottom: 18px; }
+    label { font-weight: bold; font-size: 0.85rem; margin-bottom: 6px; display: block; color: #475569; }
+    input[type="text"], input[type="time"], select { width: 100%; padding: 10px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
+    input[type="text"]:focus, input[type="time"]:focus, select:focus { border-color: #4f46e5; }
+    .time-range { display: flex; align-items: center; gap: 8px; }
+    .input-group { display: flex; gap: 8px; }
+    .btn { background: #4f46e5; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+    .btn:hover { background: #4338ca; }
+    .btn-secondary { background: #e2e8f0; color: #475569; }
+    .btn-secondary:hover { background: #cbd5e1; }
+    .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .tag { background: #e0e7ff; color: #3730a3; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; }
+    .tag-remove { cursor: pointer; font-weight: bold; color: #6366f1; }
+    .result-box { background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 20px; text-align: center; margin-top: 20px; }
+    .result-item { margin-top: 8px; }
+    .result-place { font-size: 1.6rem; font-weight: bold; color: #4f46e5; min-height: 2.2rem; }
+    .result-time { font-size: 1.3rem; font-weight: bold; color: #059669; margin-top: 4px; }
+    .spin-btn { width: 100%; padding: 14px; font-size: 1.05rem; margin-top: 12px; background: #10b981; }
+    .spin-btn:hover { background: #059669; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>習慣×場所×時間 決定ツール</h1>
+    
+    <div class="section">
+      <label for="habit">① 習慣化したいこと</label>
+      <input type="text" id="habit" placeholder="例：読書、筋トレ、勉強">
+    </div>
+
+    <div class="section">
+      <label>② 時間の範囲（何時から何時の間？）</label>
+      <div class="time-range">
+        <input type="time" id="startTime" value="09:00">
+        <span>〜</span>
+        <input type="time" id="endTime" value="18:00">
+      </div>
+    </div>
+
+    <div class="section">
+      <label for="duration">③ 実施する長さ（何分間やる？）</label>
+      <select id="duration">
+        <option value="15">15分間</option>
+        <option value="30" selected>30分間</option>
+        <option value="45">45分間</option>
+        <option value="60">1時間（60分）</option>
+        <option value="90">1時間30分（90分）</option>
+        <option value="120">2時間（120分）</option>
+      </select>
+    </div>
+
+    <div class="section">
+      <label>④ 場所の候補</label>
+      <div class="input-group">
+        <input type="text" id="placeInput" placeholder="例：カフェ、図書館、自分の部屋">
+        <button class="btn btn-secondary" onclick="addPlace()">追加</button>
+      </div>
+      <div class="tags" id="placeTags"></div>
+    </div>
+
+    <button class="btn spin-btn" onclick="decideAll()">場所と時間をランダム決定！</button>
+
+    <div class="result-box">
+      <div id="resultHabit" style="color: #64748b; font-size: 0.85rem;">条件を入力して決定ボタンを押してください</div>
+      <div class="result-item">
+        <div style="font-size: 0.8rem; color: #64748b;">【おすすめの場所】</div>
+        <div class="result-place" id="resultPlace">❓</div>
+      </div>
+      <div class="result-item" style="margin-top: 12px;">
+        <div style="font-size: 0.8rem; color: #64748b;">【おすすめの時間帯】</div>
+        <div class="result-time" id="resultTime">--:-- 〜 --:--</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let places = ["カフェ", "図書館", "自分の部屋"];
+
+    function renderTags() {
+      const container = document.getElementById("placeTags");
+      container.innerHTML = "";
+      places.forEach((place, index) => {
+        const tag = document.createElement("div");
+        tag.className = "tag";
+        tag.innerHTML = `${place} <span class="tag-remove" onclick="removePlace(${index})">×</span>`;
+        container.appendChild(tag);
+      });
+    }
+
+    function addPlace() {
+      const input = document.getElementById("placeInput");
+      const val = input.value.trim();
+      if (val) {
+        places.push(val);
+        input.value = "";
+        renderTags();
+      }
+    }
+
+    function removePlace(index) {
+      places.splice(index, 1);
+      renderTags();
+    }
+
+    function timeToMinutes(timeStr) {
+      const [h, m] = timeStr.split(":").map(Number);
+      return h * 60 + m;
+    }
+
+    function minutesToTime(minutes) {
+      const h = Math.floor(minutes / 60) % 24;
+      const m = minutes % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+
+    function decideAll() {
+      const habit = document.getElementById("habit").value.trim() || "習慣";
+      if (places.length === 0) {
+        alert("場所の候補を1つ以上追加してください！");
+        return;
+      }
+
+      const startMin = timeToMinutes(document.getElementById("startTime").value);
+      const endMin = timeToMinutes(document.getElementById("endTime").value);
+      const duration = parseInt(document.getElementById("duration").value, 10);
+
+      const maxStart = endMin - duration;
+
+      if (maxStart < startMin) {
+        alert("設定した時間の範囲が、実施する長さ（分）より短すぎます！時間の範囲を広げてください。");
+        return;
+      }
+
+      document.getElementById("resultHabit").textContent = `「${habit}」を行う予定：`;
+
+      let count = 0;
+      const interval = setInterval(() => {
+        const tempPlace = places[Math.floor(Math.random() * places.length)];
+        const randomStart = Math.floor(Math.random() * (maxStart - startMin + 1)) + startMin;
+        const randomEnd = randomStart + duration;
+
+        document.getElementById("resultPlace").textContent = tempPlace;
+        document.getElementById("resultTime").textContent = `${minutesToTime(randomStart)} 〜 ${minutesToTime(randomEnd)}`;
+
+        count++;
+        if (count > 15) {
+          clearInterval(interval);
+          const finalPlace = places[Math.floor(Math.random() * places.length)];
+          const finalStart = Math.floor(Math.random() * (maxStart - startMin + 1)) + startMin;
+          const finalEnd = finalStart + duration;
+
+          document.getElementById("resultPlace").textContent = finalPlace;
+          document.getElementById("resultTime").textContent = `${minutesToTime(finalStart)} 〜 ${minutesToTime(finalEnd)}`;
+        }
+      }, 80);
+    }
+
+    renderTags();
+  </script>
+</body>
+</html>
